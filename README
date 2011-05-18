@@ -1,0 +1,54 @@
+Demo server instances for SparkleShare
+======================================
+
+See discussion at...
+
+https://github.com/hbons/SparkleShare/wiki/Private-notification-server
+
+Two demo client/server instances for SparkleShare. Both do roughly
+the same thing: run in the background, and notify attached clients
+when the revision for a given repo changes. One is written in plain
+python using TCP sockets, the other using zeromq.
+
+The clients have two modes; watch for changes, or notify of a change.
+You'd probably not be doing both at the same time: the notification
+should probably happen in a git commit hook on the server, and the
+watch would happen in the client.
+
+The TCP server has a registration implementation that isn't really
+needed on the 0MQ side. This enables clients to register their 
+interest in a given repo; they could register for one or more. The
+0MQ client would be expected to filter that out (the filter is a 
+bit lame currently, but could do the job fine).
+
+Scalability-wise, both are of a similar design: a single event-driven
+loop. It's unlikely that either design is going to be maxxed out by
+any concievable SparkleShare user any time soon.
+
+Using it
+--------
+
+(Demonstrating the TCP version; the 0MQ should be identical).
+
+Start the server simply as so:
+
+  $ ./server/tcp-server.py
+
+On another terminal, we can then start a client watching:
+
+  $ ./client/tcp_client.py watch /home/alex/myrepo.git
+
+The client is now registered to watch /home/alex/myrepo.git with the 
+server. It should be noted the repo name is just a string: it could
+be the file path on the server by convention; but equally, it could be
+anything else to uniquely identify the repo.
+
+Then, a hook might run in a git commit to let us know the revision has
+just changed:
+
+  $ ./client/tcp_client.py -revision 99ebff687164b81c9624df8279f128fe notify /home/alex/myrepo.git
+
+You'll then see that the client started earlier has received this 
+message:
+
+Received: {"repo": "/home/alex/myrepo.git", "command": "new_version", "revision": "99ebff687164b81c9624df8279f128fe"}
