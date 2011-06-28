@@ -85,10 +85,8 @@ class TCPSparkleServer(object):
 				pass # don't care so much this fails
 	
 	def notify_clients(self, client, repo, revision):
-		print "Got to notify clients!"
 		command = E.packet(E.command("new_version"), E.repo("%s" % (repo)), E.readable("New revision is %s" % (revision)))
 		message = etree.tostring(command, pretty_print=False)
-		print "Need to send message: %s" % (message)
 		
 		if repo in self.repolist:
 			for registration in self.repolist[repo]:
