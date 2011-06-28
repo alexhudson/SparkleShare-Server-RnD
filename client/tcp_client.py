@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import socket
 import select
-import json
+from lxml import etree
+from lxml.builder import E
 import argparse
 
 HOST = 'localhost'
@@ -14,7 +15,8 @@ def connect():
 
 def watch(repo):
 	s = connect()
-	message = json.dumps({'command': 'register', 'repo' : repo})
+	command = E.packet(E.command("register"), E.repo(repo))
+	message = etree.tostring(command, pretty_print=False)
 	s.send(message)
 	
 	running = True
@@ -29,7 +31,8 @@ def watch(repo):
 
 def notify(repo, rev):
 	s = connect()
-	message = json.dumps({'command': 'new_version', 'repo' : repo, 'revision' : rev })
+	command = E.packet(E.command("new_version"), E.repo(repo), E.readable("New revision is %s" % (rev)))
+	message = etree.tostring(command, pretty_print=False)
 	s.send(message)
 	s.close()
 

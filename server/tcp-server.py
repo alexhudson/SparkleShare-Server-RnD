@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import socket
 import select
-import json
+from lxml import etree
+from lxml.builder import E
 
 HOST, PORT = "localhost", 9999
 
@@ -49,11 +50,15 @@ class TCPSparkleServer(object):
 		if message == '':
 			return
 		try:
-			data = json.loads(message)
-			command = data['command']
-			repo = data['repo']
+			data = etree.XML(message)
+			command = data.xpath('/packet/command/text()')[0]
+			repo = data.xpath('/packet/repo/text()')[0]
+			readable = data.xpath('/packet/readable/text()')
+			if readable:
+				readable = readable[0]
+			print message
 		except:
-			print "Error parsing message from client"
+			print "Error parsing message from client: %s" % (message)
 			return
 		
 		if command == 'register':
@@ -61,7 +66,7 @@ class TCPSparkleServer(object):
 		elif command == 'unregister':
 			self.unregister_client_from_repo(client, repo)
 		elif command == 'new_version':
-			self.notify_clients(client, repo, data['revision'])
+			self.notify_clients(client, repo, readable)
 	
 	def register_client_to_repo(self, client, repo):
 		if repo not in self.repolist:
@@ -80,7 +85,10 @@ class TCPSparkleServer(object):
 				pass # don't care so much this fails
 	
 	def notify_clients(self, client, repo, revision):
-		message = json.dumps({'command': 'new_version', 'repo' : repo, 'revision': revision})
+		print "Got to notify clients!"
+		command = E.packet(E.command("new_version"), E.repo("%s" % (repo)), E.readable("New revision is %s" % (revision)))
+		message = etree.tostring(command, pretty_print=False)
+		print "Need to send message: %s" % (message)
 		
 		if repo in self.repolist:
 			for registration in self.repolist[repo]:
